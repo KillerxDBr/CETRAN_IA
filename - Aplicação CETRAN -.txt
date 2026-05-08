@@ -1,0 +1,7 @@
+- Aplicação CETRAN - 
+
+Instalações de bibliotecas ( powershell ) : pip install streamlit pdfplumber docxtpl requests
+
+Abertura Aplicação( terminal IDE ): python -m streamlit run app.py
+
+Versão de IA instalada local: llama3:8b
