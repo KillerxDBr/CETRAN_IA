@@ -114,6 +114,15 @@ def _extrair_veiculo(texto):
     return ""
 
 
+def _extrair_veiculo2(texto: str):
+    for line in texto.split("\n"):
+        if line.startswith("2.2 - MARCA/MODELO:"):
+            line = line.removeprefix("2.2 - MARCA/MODELO:").split("-")[0].strip()
+            return line
+    return ""
+    return _extrair_veiculo(texto)
+
+
 def extrair_dados_detran_pdf(caminho_pdf):
     dados = {
         "processo": "",
@@ -193,7 +202,7 @@ def extrair_dados_detran_pdf(caminho_pdf):
         dados["artigo_ctb"] = _extrair_artigo_ctb(texto_completo)
 
         # 10. Veículo (marca/modelo/cor)
-        dados["veiculo_completo"] = _extrair_veiculo(texto_completo)
+        dados["veiculo_completo"] = _extrair_veiculo2(texto_completo)
 
         return dados, texto_completo
 

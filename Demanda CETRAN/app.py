@@ -56,8 +56,13 @@ if arquivo_pdf:
     with col_info1:
         st.metric("📎 Arquivo", arquivo_pdf.name)
     with col_info2:
-        tamanho = round(arquivo_pdf.size / 1024, 1)
-        st.metric("💾 Tamanho", f"{tamanho} KB")
+        if arquivo_pdf.size > (1024 * 1024):
+            metrica = "MB"
+            tamanho = round(arquivo_pdf.size / (1024 * 1024), 1)
+        else:
+            metrica = "KB"
+            tamanho = round(arquivo_pdf.size / 1024, 1)
+        st.metric("💾 Tamanho", f"{tamanho} {metrica}")
     with col_info3:
         st.metric("🕐 Data Upload", datetime.now().strftime("%d/%m/%Y %H:%M"))
 

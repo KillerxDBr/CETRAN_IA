@@ -13,6 +13,8 @@ def resumir_defesa_ia(texto_pdf):
     {texto_pdf[:4000]} # Limitamos o texto para não estourar o contexto
     """
     
+    # return "Skipped"
+
     try:
         response = requests.post("http://localhost:11434/api/generate", json={
             "model": "llama3:8b",
@@ -22,5 +24,5 @@ def resumir_defesa_ia(texto_pdf):
         }, timeout=60)
         
         return response.json().get("response", "").strip()
-    except:
-        return "Não foi possível resumir a alegação automaticamente."
+    except Exception as e:
+        return f"Não foi possível resumir a alegação automaticamente: {e}."

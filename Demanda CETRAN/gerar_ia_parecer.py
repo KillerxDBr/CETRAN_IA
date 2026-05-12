@@ -14,6 +14,7 @@ def _chamar_ollama(prompt, json_mode=False):
             "top_p": 0.9,
         }
     }
+    # return "Skipped"
     try:
         response = requests.post(url, json=payload, timeout=180)
         response.raise_for_status()
