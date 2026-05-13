@@ -4,6 +4,13 @@ from datetime import datetime
 from extrair_pdf import extrair_dados_detran_pdf
 from gerar_ia_parecer import mapear_e_analisar_processo_ia
 from gerar_parecer import gerar_documento_parecer
+import locale as lc
+
+lc.setlocale(lc.LC_CTYPE, '')
+lc.setlocale(lc.LC_COLLATE, '')
+lc.setlocale(lc.LC_TIME, '')
+
+st.write(f"Locale: {lc.setlocale(lc.LC_ALL, None)}")
 
 st.set_page_config(layout="wide", page_title="CETRAN-MT", page_icon="⚖️")
 
@@ -76,7 +83,31 @@ if arquivo_pdf:
             st.session_state.texto_bruto = texto_bruto
 
     basic = st.session_state.basic_data
-    texto_bruto = st.session_state.texto_bruto
+
+    prefixes = (
+        "Autenticado com senha por",
+        "https://www.sigadoc.mt.gov.br/"
+    )
+    suffixes = (
+        "PACNARTED"
+    )
+    ignore = [
+        "DETRAN",
+        "G",
+        "overno",
+        "de M",
+        "ato Grosso",
+        "overno d",
+        "e Mato Grosso",
+    ]
+    tmp = []
+    for x in st.session_state.texto_bruto.strip().split("\n"):
+        x = x.strip()
+        if x and (x not in ignore or not x.startswith(prefixes) or not x.endswith(suffixes)):
+            # texto_bruto += x + "\n"
+            tmp.append(x)
+
+    texto_bruto = '\n'.join(tmp).strip()
 
     if basic:
         # ========== ANÁLISE COM IA ==========
@@ -148,6 +179,12 @@ if arquivo_pdf:
                     value=ia.get("tipificacao") or "",
                     placeholder="Art. 218 do CTB - Excesso de velocidade"
                 )
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.text_input("Data De Autuaçao", value=ia.get('data_autuaçao'))
+            with col2:
+                st.text_input("Data De Notificação", value=ia.get('data_notificacao'))
 
             # Validação visual
             st.divider()

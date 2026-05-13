@@ -119,7 +119,6 @@ def _extrair_veiculo2(texto: str):
         if line.startswith("2.2 - MARCA/MODELO:"):
             line = line.removeprefix("2.2 - MARCA/MODELO:").split("-")[0].strip()
             return line
-    return ""
     return _extrair_veiculo(texto)
 
 
