@@ -143,6 +143,52 @@ def extrair_dados_detran_pdf(caminho_pdf):
                 texto_pagina = pagina.extract_text() or ""
                 texto_completo += texto_pagina + "\n"
 
+        prefixes = [
+            "Autenticado com senha por",
+            "https://www.sigadoc.mt.gov.br/",
+        ]
+        suffixes = [
+            "PACNARTED",
+            "consulta à autenticidade em",
+        ]
+        ignore = [
+            "DETRAN",
+            "G",
+            "overno",
+            "de M",
+            "ato Grosso",
+            "overno d",
+            "e Mato Grosso",
+        ]
+        tmp = []
+        for x in texto_completo.strip().split("\n"):
+            x = x.strip()
+            if len(x) < 2:
+                continue
+            if x in ignore:
+                continue
+
+            skip = False
+            for p in prefixes:
+                if x.startswith(p):
+                    skip = True
+            if skip:
+                continue
+
+            for s in suffixes:
+                if x.endswith(s):
+                    skip = True
+            if skip:
+                continue
+
+            t = x.split(" ")
+            if (len(t) == 4) and (t[0] == "Página") and (t[2] == "de" or t[2] == "/"):
+                continue
+
+            tmp.append(x)
+
+        texto_completo = "\n".join(tmp).strip()
+
         # 1. Processo SIGADOC (ex: DETRAN-PRO-2025/30490)
         proc = re.search(r"(DETRAN-PRO-\d{4}/\d+)", texto_completo)
         if proc:

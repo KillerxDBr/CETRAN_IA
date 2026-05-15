@@ -1,3 +1,5 @@
+from datetime import datetime
+from pathlib import Path
 from docxtpl import DocxTemplate
 import os
 
@@ -46,12 +48,18 @@ def gerar_documento_parecer(dados):
 
         os.makedirs("arquivos_gerados", exist_ok=True)
         # Nome do arquivo: Parecer_[AIT].docx
-        nome_saida = f"Parecer_{dados.get('ait_numero', 'GERADO').strip()}.docx"
-        nome_saida = nome_saida.replace("/", "-").replace("\\", "-")
-        caminho_saida = os.path.join("arquivos_gerados", nome_saida)
+        nome_saida = f"Parecer_{dados.get('ait_numero', 'GERADO').strip()}_{datetime.now().strftime('%d_%m_%Y-%H_%M_%S')}.docx"
+        # nome_saida = nome_saida.replace("/", "-").replace("\\", "-")
+        caminho_saida = Path("arquivos_gerados") / nome_saida
+        # caminho_saida = os.path.join("arquivos_gerados", nome_saida)
+
+        missing = doc.get_undeclared_template_variables()
+
+        for x in missing:
+            print(f'Missing: {x}')
 
         doc.save(caminho_saida)
-        return caminho_saida
+        return str(caminho_saida.resolve())
 
     except Exception as e:
         print(f"ERRO ao renderizar Word: {e}")

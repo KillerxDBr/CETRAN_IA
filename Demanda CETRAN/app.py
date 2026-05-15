@@ -6,16 +6,17 @@ from gerar_ia_parecer import mapear_e_analisar_processo_ia
 from gerar_parecer import gerar_documento_parecer
 import locale as lc
 
-lc.setlocale(lc.LC_CTYPE, '')
-lc.setlocale(lc.LC_COLLATE, '')
-lc.setlocale(lc.LC_TIME, '')
+lc.setlocale(lc.LC_CTYPE, "")
+lc.setlocale(lc.LC_COLLATE, "")
+lc.setlocale(lc.LC_TIME, "")
 
 st.write(f"Locale: {lc.setlocale(lc.LC_ALL, None)}")
 
 st.set_page_config(layout="wide", page_title="CETRAN-MT", page_icon="⚖️")
 
 # ========== ESTILO CUSTOMIZADO ==========
-st.markdown("""
+st.markdown(
+    """
 <style>
     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] { padding: 10px 20px; border-radius: 8px 8px 0 0; }
@@ -24,7 +25,9 @@ st.markdown("""
     .success-box { padding: 20px; background: #d4edda; border-radius: 10px; border-left: 5px solid #28a745; }
     .warning-box { padding: 20px; background: #fff3cd; border-radius: 10px; border-left: 5px solid #ffc107; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ========== CABEÇALHO ==========
 st.title("⚖️ Sistema de Pareceres - CETRAN-MT")
@@ -45,11 +48,7 @@ for key, val in defaults.items():
 
 # ========== UPLOAD DE ARQUIVO ==========
 st.header("📄 Upload do Processo Digital")
-arquivo_pdf = st.file_uploader(
-    "Arraste e solte ou selecione o arquivo PDF do processo",
-    type=["pdf"],
-    help="Formatos aceitos: PDF"
-)
+arquivo_pdf = st.file_uploader("Arraste e solte ou selecione o arquivo PDF do processo", type=["pdf"], help="Formatos aceitos: PDF")
 
 if arquivo_pdf:
     # Reset se arquivo mudou
@@ -84,30 +83,7 @@ if arquivo_pdf:
 
     basic = st.session_state.basic_data
 
-    prefixes = (
-        "Autenticado com senha por",
-        "https://www.sigadoc.mt.gov.br/"
-    )
-    suffixes = (
-        "PACNARTED"
-    )
-    ignore = [
-        "DETRAN",
-        "G",
-        "overno",
-        "de M",
-        "ato Grosso",
-        "overno d",
-        "e Mato Grosso",
-    ]
-    tmp = []
-    for x in st.session_state.texto_bruto.strip().split("\n"):
-        x = x.strip()
-        if x and (x not in ignore or not x.startswith(prefixes) or not x.endswith(suffixes)):
-            # texto_bruto += x + "\n"
-            tmp.append(x)
 
-    texto_bruto = '\n'.join(tmp).strip()
 
     if basic:
         # ========== ANÁLISE COM IA ==========
@@ -119,11 +95,7 @@ if arquivo_pdf:
         ia = st.session_state.ia_data
 
         # ========== TABS ==========
-        tab_dados, tab_detalhes, tab_documento = st.tabs([
-            "📋 Dados do Processo",
-            "🔍 Texto Extraído",
-            "📝 Gerar Documento"
-        ])
+        tab_dados, tab_detalhes, tab_documento = st.tabs(["📋 Dados do Processo", "🔍 Texto Extraído", "📝 Gerar Documento"])
 
         with tab_dados:
             st.subheader("Informações Principais")
@@ -132,59 +104,30 @@ if arquivo_pdf:
             col1, col2, col3 = st.columns(3)
             with col1:
                 processo = st.text_input(
-                    "Número do Processo",
-                    value=basic.get("processo") or "",
-                    placeholder="DETRAN-PRO-2025/XXXXX",
-                    help="Processo SIGADOC do DETRAN"
+                    "Número do Processo", value=basic.get("processo") or "", placeholder="DETRAN-PRO-2025/XXXXX", help="Processo SIGADOC do DETRAN"
                 )
-                ait = st.text_input(
-                    "AIT",
-                    value=basic.get("ait_numero") or "",
-                    placeholder="F433623812"
-                )
-                placa = st.text_input(
-                    "Placa do Veículo",
-                    value=basic.get("placa") or "",
-                    placeholder="AAA0000"
-                )
+                ait = st.text_input("AIT", value=basic.get("ait_numero") or "", placeholder="F433623812")
+                placa = st.text_input("Placa do Veículo", value=basic.get("placa") or "", placeholder="AAA0000")
             with col2:
-                recorrente = st.text_input(
-                    "Nome do Recorrente",
-                    value=basic.get("recorrente") or ia.get("recorrente", ""),
-                    placeholder="Nome completo"
-                )
-                jari = st.text_input(
-                    "JARI de Origem",
-                    value=ia.get("jari_origem") or "",
-                    placeholder="JARI Municipal / DETRAN"
-                )
-                legitimidade = st.text_input(
-                    "Legitimidade",
-                    value=ia.get("legitimidade") or "",
-                    placeholder="Proprietário / Condutor"
-                )
+                recorrente = st.text_input("Nome do Recorrente", value=basic.get("recorrente") or ia.get("recorrente", ""), placeholder="Nome completo")
+                jari = st.text_input("JARI de Origem", value=ia.get("jari_origem") or "", placeholder="JARI Municipal / DETRAN")
+                legitimidade = st.text_input("Legitimidade", value=ia.get("legitimidade") or "", placeholder="Proprietário / Condutor")
             with col3:
                 veiculo = st.text_input(
-                    "Veículo (Marca/Modelo/Cor)",
-                    value=basic.get("veiculo_completo") or ia.get("veiculo_completo") or "",
-                    placeholder="Fiat Mobi / Prata"
+                    "Veículo (Marca/Modelo/Cor)", value=basic.get("veiculo_completo") or ia.get("veiculo_completo") or "", placeholder="Fiat Mobi / Prata"
                 )
                 local_hora = st.text_input(
-                    "Local e Hora da Infração",
-                    value=ia.get("local_hora") or "",
-                    placeholder="Av. Principal, 00 - Cidade, 01/01/2025 00:00"
+                    "Local e Hora da Infração", value=ia.get("local_hora") or "", placeholder="Av. Principal, 00 - Cidade, 01/01/2025 00:00"
                 )
                 tipificacao = st.text_input(
-                    "Tipificação (Artigo CTB)",
-                    value=ia.get("tipificacao") or "",
-                    placeholder="Art. 218 do CTB - Excesso de velocidade"
+                    "Tipificação (Artigo CTB)", value=ia.get("tipificacao") or "", placeholder="Art. 218 do CTB - Excesso de velocidade"
                 )
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.text_input("Data De Autuaçao", value=ia.get('data_autuaçao'))
+                st.text_input("Data De Autuaçao", value=ia.get("data_autuaçao"))
             with col2:
-                st.text_input("Data De Notificação", value=ia.get('data_notificacao'))
+                st.text_input("Data De Notificação", value=ia.get("data_notificacao"))
 
             # Validação visual
             st.divider()
@@ -208,18 +151,15 @@ if arquivo_pdf:
                         all_valid = False
 
             if not all_valid:
-                st.markdown('<div class="warning-box">Preencha todos os campos obrigatórios (em vermelho) antes de gerar o documento.</div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="warning-box">Preencha todos os campos obrigatórios (em vermelho) antes de gerar o documento.</div>', unsafe_allow_html=True
+                )
 
         with tab_detalhes:
             st.subheader("📄 Texto Ext do PDF")
             with st.expander("Ver texto completo extraído", expanded=False):
                 if texto_bruto:
-                    st.text_area(
-                        "Conteúdo do PDF",
-                        value=texto_bruto[:15000] + ("..." if len(texto_bruto) > 15000 else ""),
-                        height=400,
-                        disabled=True
-                    )
+                    st.text_area("Conteúdo do PDF", value=texto_bruto[:15000] + ("..." if len(texto_bruto) > 15000 else ""), height=400, disabled=True)
                     st.caption(f"Total: {len(texto_bruto)} caracteres")
                 else:
                     st.info("Nenhum texto extraído.")
@@ -238,23 +178,22 @@ if arquivo_pdf:
 
             col_doc1, col_doc2 = st.columns(2)
             with col_doc1:
-                ano_parecer = st.text_input(
-                    "Ano do Parecer",
-                    value=str(datetime.now().year),
-                    disabled=True
-                )
-                voto_final = st.selectbox(
-                    "Resultado do Voto",
-                    options=["INDEFERIMENTO", "DEFERIMENTO", "PARCIALMENTE DEFERIDO"],
-                    index=0
-                )
+                ano_parecer = st.text_input("Ano do Parecer", value=str(datetime.now().year), disabled=True)
+                voto_final = st.selectbox("Resultado do Voto", options=["INDEFERIMENTO", "DEFERIMENTO", "PARCIALMENTE DEFERIDO"], index=0)
             with col_doc2:
-                num_parecer = st.text_input(
-                    "Número do Parecer",
-                    value="____",
-                    placeholder="0001/2025"
+                num_parecer = st.text_input("Número do Parecer", value="____", placeholder="0001/2025")
+                decadencia_options = [
+                    "Notificação da Autuação dentro do prazo",
+                    "Notificação da Autuação fora do prazo",
+                    "Notificação da Penalidade dentro do prazo sem defesa de autuação",
+                    "Notificação da Penalidade dentro do prazo com defesa de autuação",
+                    "Notificação da Penalidade fora do prazo sem defesa de autuação",
+                    "Notificação da Penalidade fora do prazo com defesa de autuação",
+                ]
+                hip_decadencia = st.selectbox(
+                    "Decadencia",
+                    options=decadencia_options,
                 )
-
             st.divider()
 
             # Preview do pacote
@@ -299,12 +238,14 @@ if arquivo_pdf:
 
                 if caminho:
                     st.session_state.caminho_gerado = caminho
-                    st.session_state.historico.append({
-                        "arquivo": arquivo_pdf.name,
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "caminho": caminho,
-                        "AIT": ait,
-                    })
+                    st.session_state.historico.append(
+                        {
+                            "arquivo": arquivo_pdf.name,
+                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "caminho": caminho,
+                            "AIT": ait,
+                        }
+                    )
                     st.rerun()
 
             # Download do documento gerado
@@ -315,12 +256,7 @@ if arquivo_pdf:
                 col_dl1, col_dl2 = st.columns(2)
                 with col_dl1:
                     with open(st.session_state.caminho_gerado, "rb") as f:
-                        st.download_button(
-                            "📥 BAIXAR PARECER (DOCX)",
-                            f,
-                            file_name=os.path.basename(st.session_state.caminho_gerado),
-                            type="primary"
-                        )
+                        st.download_button("📥 BAIXAR PARECER (DOCX)", f, file_name=os.path.basename(st.session_state.caminho_gerado), type="primary")
                 with col_dl2:
                     if st.button("🗑️ Limpar e Processar Novo"):
                         for key in list(st.session_state.keys()):
@@ -340,12 +276,7 @@ if st.session_state.historico:
         with col_h1:
             st.text(f"📄 {item['AIT']}")
         with col_h2:
-            st.caption(item['data'])
+            st.caption(item["data"])
         with col_h3:
-            with open(item['caminho'], "rb") as f:
-                st.download_button(
-                    "📥",
-                    f,
-                    file_name=os.path.basename(item['caminho']),
-                    key=f"dl_{item['data'].replace(':', '')}"
-                )
+            with open(item["caminho"], "rb") as f:
+                st.download_button("📥", f, file_name=os.path.basename(item["caminho"]), key=f"dl_{item['data'].replace(':', '')}")

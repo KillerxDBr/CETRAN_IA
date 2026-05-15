@@ -77,8 +77,8 @@ Responda EXCLUSIVAMENTE em JSON válido (sem markdown, sem comentários):
 
     print(f"{len(prompt) = }")
 
-    res = _chamar_ollama(prompt, json_mode=True)
-
+    # res = _chamar_ollama(prompt, json_mode=True)
+    res = '{}'
     try:
         dados = json.loads(res)
         # Garante que todas as chaves existem
