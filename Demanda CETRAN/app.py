@@ -1,10 +1,13 @@
-import streamlit as st
 import os
-from datetime import datetime
+import datetime as dt
+import locale as lc
+from pprint import pprint
+
+import streamlit as st
+
 from extrair_pdf import extrair_dados_detran_pdf
 from gerar_ia_parecer import mapear_e_analisar_processo_ia
 from gerar_parecer import gerar_documento_parecer
-import locale as lc
 
 lc.setlocale(lc.LC_CTYPE, "")
 lc.setlocale(lc.LC_COLLATE, "")
@@ -15,19 +18,19 @@ st.write(f"Locale: {lc.setlocale(lc.LC_ALL, None)}")
 st.set_page_config(layout="wide", page_title="CETRAN-MT", page_icon="⚖️")
 
 # ========== ESTILO CUSTOMIZADO ==========
-st.markdown(
-    """
-<style>
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { padding: 10px 20px; border-radius: 8px 8px 0 0; }
-    .stMetric { background: #f0f2f6; padding: 15px; border-radius: 10px; }
-    div[data-testid="stExpander"] { border: 1px solid #e0e0e0; border-radius: 8px; }
-    .success-box { padding: 20px; background: #d4edda; border-radius: 10px; border-left: 5px solid #28a745; }
-    .warning-box { padding: 20px; background: #fff3cd; border-radius: 10px; border-left: 5px solid #ffc107; }
-</style>
-""",
-    unsafe_allow_html=True,
-)
+# st.markdown(
+#     """
+# <style>
+#     .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+#     .stTabs [data-baseweb="tab"] { padding: 10px 20px; border-radius: 8px 8px 0 0; }
+#     .stMetric { background: #f0f2f6; padding: 15px; border-radius: 10px; }
+#     div[data-testid="stExpander"] { border: 1px solid #e0e0e0; border-radius: 8px; }
+#     .success-box { padding: 20px; background: #d4edda; border-radius: 10px; border-left: 5px solid #28a745; }
+#     .warning-box { padding: 20px; background: #fff3cd; border-radius: 10px; border-left: 5px solid #ffc107; }
+# </style>
+# """,
+#     unsafe_allow_html=True,
+# )
 
 # ========== CABEÇALHO ==========
 st.title("⚖️ Sistema de Pareceres - CETRAN-MT")
@@ -70,7 +73,7 @@ if arquivo_pdf:
             tamanho = round(arquivo_pdf.size / 1024, 1)
         st.metric("💾 Tamanho", f"{tamanho} {metrica}")
     with col_info3:
-        st.metric("🕐 Data Upload", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        st.metric("🕐 Data Upload", dt.datetime.now().strftime("%d/%m/%Y %H:%M"))
 
     st.divider()
 
@@ -82,8 +85,40 @@ if arquivo_pdf:
             st.session_state.texto_bruto = texto_bruto
 
     basic = st.session_state.basic_data
+    texto_bruto = st.session_state.texto_bruto
 
+    decadencia_options = [
+        "Escolha uma Decadencia",
+        "Notificação da Autuação dentro do prazo",
+        "Notificação da Autuação fora do prazo",
+        "Notificação da Penalidade dentro do prazo sem defesa de autuação",
+        "Notificação da Penalidade dentro do prazo com defesa de autuação",
+        "Notificação da Penalidade fora do prazo sem defesa de autuação",
+        "Notificação da Penalidade fora do prazo com defesa de autuação",
+    ]
 
+    prescricao_options = [
+        "Escolha uma Prescrição",
+        "Não ocorrência de prescrição punitiva ou intercorrente",
+        "Ocorrência de prescrição punitiva de 05 anos",
+        "Ocorrência de prescrição intercorrente de 02 anos do CTB no âmbito da JARI",
+        "Ocorrência de prescrição intercorrente de 02 anos do CTB no âmbito do CETRAN",
+    ]
+
+    voto_options = [
+        "Escolha um Voto",
+        "Intempestividade",
+        "Ilegitimidade",
+        "Falta de assinatura válida",
+        "Pedido incompatível com a situação fática",
+        "Pedido não cumpre requisitos legais (um recurso para mais de uma autuação)",
+        "Cancelamento da autuação por decadência da expedição da Notificação da Autuação",
+        "Cancelamento da autuação por decadência da expedição da Notificação da Penalidade",
+        "Não conhecimento (Pedido de reconsideração)",
+        "Deferimento do pedido por supressão de instância de julgamento",
+        "Indeferimento (com mérito)",
+        "Deferimento (com mérito)",
+    ]
 
     if basic:
         # ========== ANÁLISE COM IA ==========
@@ -117,7 +152,7 @@ if arquivo_pdf:
                     "Veículo (Marca/Modelo/Cor)", value=basic.get("veiculo_completo") or ia.get("veiculo_completo") or "", placeholder="Fiat Mobi / Prata"
                 )
                 local_hora = st.text_input(
-                    "Local e Hora da Infração", value=ia.get("local_hora") or "", placeholder="Av. Principal, 00 - Cidade, 01/01/2025 00:00"
+                    "Local e Hora da Infração", value=f"{ia.get("local_infracao") or ""} - {ia.get("data_hora") or ""}", placeholder="Av. Principal, 00 - Cidade, 01/01/2025 00:00"
                 )
                 tipificacao = st.text_input(
                     "Tipificação (Artigo CTB)", value=ia.get("tipificacao") or "", placeholder="Art. 218 do CTB - Excesso de velocidade"
@@ -125,10 +160,11 @@ if arquivo_pdf:
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.text_input("Data De Autuaçao", value=ia.get("data_autuaçao"))
+                data_autuacao = st.text_input("Data De Autuaçao", value=ia.get("data_autuacao", "") or "01/01/2024")
             with col2:
-                st.text_input("Data De Notificação", value=ia.get("data_notificacao"))
-
+                data_notificacao = st.text_input("Data De Notificação", value=ia.get("data_notificacao", "") or "01/01/2024")
+            with col3:
+                data_lavratura = st.text_input("Data De Lavratura", value=ia.get("data_lavratura", "") or "01/01/2024")
             # Validação visual
             st.divider()
             st.subheader("⚠️ Validação dos Dados")
@@ -176,41 +212,58 @@ if arquivo_pdf:
         with tab_documento:
             st.subheader("⚖️ Configuração do Parecer")
 
-            col_doc1, col_doc2 = st.columns(2)
-            with col_doc1:
-                ano_parecer = st.text_input("Ano do Parecer", value=str(datetime.now().year), disabled=True)
-                voto_final = st.selectbox("Resultado do Voto", options=["INDEFERIMENTO", "DEFERIMENTO", "PARCIALMENTE DEFERIDO"], index=0)
-            with col_doc2:
-                num_parecer = st.text_input("Número do Parecer", value="____", placeholder="0001/2025")
-                decadencia_options = [
-                    "Notificação da Autuação dentro do prazo",
-                    "Notificação da Autuação fora do prazo",
-                    "Notificação da Penalidade dentro do prazo sem defesa de autuação",
-                    "Notificação da Penalidade dentro do prazo com defesa de autuação",
-                    "Notificação da Penalidade fora do prazo sem defesa de autuação",
-                    "Notificação da Penalidade fora do prazo com defesa de autuação",
-                ]
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                ano_parecer = st.text_input("Ano do Parecer", value=str(
+                    dt.datetime.now().year), disabled=True)
                 hip_decadencia = st.selectbox(
                     "Decadencia",
                     options=decadencia_options,
                 )
+
+            with col2:
+                voto_final = st.selectbox("Resultado do Voto", options=["INDEFERIMENTO", "DEFERIMENTO", "PARCIALMENTE DEFERIDO"])
+                hip_prescricao = st.selectbox(
+                    "Prescrição",
+                    options=prescricao_options,
+                )
+
+            with col3:
+                num_parecer = st.text_input(
+                    "Número do Parecer", placeholder="0001/2025")
+                hip_voto = st.selectbox(
+                    "Voto",
+                    options=voto_options,
+                )
+
             st.divider()
 
             # Preview do pacote
             st.subheader("📋 Resumo dos Dados para Geração")
+            dateFormat = "%d/%m/%Y"
+            data_lavratura_dt   = dt.datetime.strptime(data_lavratura, dateFormat)
+            data_notificacao_dt = dt.datetime.strptime(data_notificacao, dateFormat)
+
             pacote_preview = {
-                "processo": processo or "—",
-                "recorrente": recorrente or "—",
-                "ait_numero": ait or "—",
-                "placa_veiculo": placa or "—",
-                "num_parecer": num_parecer,
-                "ano": ano_parecer,
-                "jari_origem": jari or "—",
-                "veiculo_completo": veiculo or "—",
-                "local_hora": local_hora or "—",
-                "tipificacao": tipificacao or "—",
-                "legitimidade": legitimidade or "—",
-                "voto_final": voto_final,
+                "processo": processo or "-",
+                "recorrente": recorrente or "-",
+                "ait_numero": ait or "-",
+                "placa_veiculo": placa or "-",
+                "num_parecer": num_parecer or "-",
+                "ano": ano_parecer or "-",
+                "jari_origem": jari or "-",
+                "veiculo_completo": veiculo or "-",
+                "local_hora": local_hora or "-",
+                "tipificacao": tipificacao or "-",
+                "legitimidade": legitimidade or "-",
+                "voto_final": voto_final or "-",
+                "decadencia_hip": decadencia_options.index(hip_decadencia) or 0,
+                "prescricao_hip": prescricao_options.index(hip_prescricao) or 0,
+                "voto_hip": voto_options.index(hip_voto) or 0,
+                "data_autuacao": data_autuacao or "-",
+                "data_lavratura_ait": data_lavratura or "-",
+                "data_notificacao": data_notificacao or "-",
+                "dias_autuacao_na": (data_notificacao_dt - data_lavratura_dt).days or "-",
             }
             st.json(pacote_preview)
 
@@ -218,6 +271,16 @@ if arquivo_pdf:
 
             # Botão de geração
             if st.button("🚀 GERAR PARECER", type="primary", disabled=not all_valid):
+                print(f"{data_autuacao=}")
+                print(f"{data_lavratura=}")
+                print(f"{data_notificacao=}")
+
+                dateFormat = "%d/%m/%Y"
+
+                data_autuacao_dt = dt.datetime.strptime(data_autuacao, dateFormat)
+                data_lavratura_dt = dt.datetime.strptime(data_lavratura, dateFormat)
+                data_notificacao_dt = dt.datetime.strptime(data_notificacao, dateFormat)
+
                 pacote = {
                     "processo": processo,
                     "recorrente": recorrente,
@@ -231,7 +294,16 @@ if arquivo_pdf:
                     "tipificacao": tipificacao,
                     "legitimidade": legitimidade,
                     "voto_final": voto_final,
+                    "decadencia_hip": decadencia_options.index(hip_decadencia) or 0,
+                    "prescricao_hip": prescricao_options.index(hip_prescricao) or 0,
+                    "voto_hip": voto_options.index(hip_voto) or 0,
+                    "data_autuacao": data_autuacao,
+                    "data_lavratura_ait": data_lavratura,
+                    "data_notificacao": data_notificacao,
+                    "dias_autuacao_na": (data_notificacao_dt - data_lavratura_dt).days,
                 }
+
+                pprint(pacote)
 
                 with st.spinner("📝 Gerando documento Word..."):
                     caminho = gerar_documento_parecer(pacote)
@@ -241,7 +313,7 @@ if arquivo_pdf:
                     st.session_state.historico.append(
                         {
                             "arquivo": arquivo_pdf.name,
-                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "data": dt.datetime.now().strftime("%d/%m/%Y %H:%M"),
                             "caminho": caminho,
                             "AIT": ait,
                         }

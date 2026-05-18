@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 import requests
 import json
@@ -43,13 +44,15 @@ def mapear_e_analisar_processo_ia(texto_bruto):
         "jari_origem": "Nome da JARI que julga o recurso (ex: JARI Municipal de Cuiaba, DETRAN)",
         "legitimidade": "Qualificação do recorrente: Proprietário ou Condutor",
         "veiculo_completo": "Marca, modelo E cor do veículo. Exemplos: 'Toyota Corolla Prata', 'Fiat Mobi Vermelho', 'Honda Civic Cinza'. NUNCA use a placa aqui.",
-        "local_hora": "Endereço completo da infração com data e hora no formato: <Local da Infração>, <Cidade>-<Estado>, <DD/MM/YYYY> <HH:mm>",
+        "local_infracao": "Endereço completo da infração no formato: <Local da Infração>, <Cidade>-<Estado>",
+        "data_hora": "Data e hora da infração no formato: <DD/MM/YYYY> <HH:mm>",
         "tipificacao": "Artigo do CTB infringido com descrição (ex: Art. 218, Inciso I do CTB - Ultrapassar em faixa de pedestre)",
         "valor_multa": "Valor da multa se mencionada (ex: R$ 293,47 ou  se não mencionada)",
         "pontos_cnh": "Pontos na CNH se mencionados (ex: 7 pontos ou  se não mencionados)",
         "artigo_ctb": "Somente o artigo do CTB (ex: Art. 218)",
-        "data_autuaçao": "Data em que foi efetuada a Autuação da infração no formato DD/MM/YYYY",
-        "data_notificacao": "Data da Postagem da Notificação da Autuação, no formato DD/MM/YYYY",
+        "data_autuacao": "Data em que foi efetuada a Autuação da Infração no formato DD/MM/YYYY",
+        "data_lavratura": "Data de lavratura do Auto da Infraçao no formato DD/MM/YYYY",
+        "data_notificacao": "Data da Postagem da Notificação da Autuação no formato DD/MM/YYYY",
     }
 
     # Prompt melhorado com instruções claras e sem ambiguidade
@@ -72,19 +75,22 @@ Responda EXCLUSIVAMENTE em JSON válido (sem markdown, sem comentários):
 """
 
     dt = datetime.now()
+    os.makedirs("prompts", exist_ok=True)
     with open(f"prompts/prompt-{dt.strftime('%d_%m_%Y-%H_%M_%S')}.txt", "xb") as f:
         f.write(prompt.encode())
 
     print(f"{len(prompt) = }")
 
-    # res = _chamar_ollama(prompt, json_mode=True)
-    res = '{}'
+    res = _chamar_ollama(prompt, json_mode=True)
+    # res = '{}'
     try:
         dados = json.loads(res)
         # Garante que todas as chaves existem
         for campo in campos.keys():
             if campo not in dados:
                 dados[campo] = ""
+                print(f"campo {campo} esta faltando")
+        print(f"{dados["data_lavratura"] = }")
         return dados
     except json.JSONDecodeError as e:
         print(f"ERRO: Resposta da IA não é JSON válido: {e}")

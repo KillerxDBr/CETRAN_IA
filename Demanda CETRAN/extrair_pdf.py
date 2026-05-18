@@ -1,6 +1,11 @@
+from os import abort
+
 import pdfplumber
 import re
 from datetime import datetime
+from liteparse import LiteParse
+import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
 def _extrair_cpf(texto):
@@ -121,8 +126,32 @@ def _extrair_veiculo2(texto: str):
             return line
     return _extrair_veiculo(texto)
 
+parser = LiteParse()
 
-def extrair_dados_detran_pdf(caminho_pdf):
+prefixes_lp = [
+    "Autenticado com senha por",
+    "https://www.sigadoc.mt.gov.br/",
+]
+
+suffixes_lp = [
+    "PACNARTED",
+    "consulta à autenticidade em",
+]
+
+ignore_lp = [
+    "r  no  de Ma o",
+    "e            G",
+    "v     25        r",
+    "o                s",
+    "G                s",
+    "DETR A N",
+]
+
+contains_lp = [
+    "Assinado com senha por",
+]
+
+def extrair_dados_detran_pdf(caminho_pdf: UploadedFile):
     dados = {
         "processo": "",
         "recorrente": "",
@@ -138,56 +167,51 @@ def extrair_dados_detran_pdf(caminho_pdf):
     texto_completo = ""
 
     try:
-        with pdfplumber.open(caminho_pdf) as pdf:
-            for i, pagina in enumerate(pdf.pages):
-                texto_pagina = pagina.extract_text() or ""
-                texto_completo += texto_pagina + "\n"
+        pdfBytes = caminho_pdf.read()
+        print(f"INFO: {len(pdfBytes)} bytes read")
 
-        prefixes = [
-            "Autenticado com senha por",
-            "https://www.sigadoc.mt.gov.br/",
-        ]
-        suffixes = [
-            "PACNARTED",
-            "consulta à autenticidade em",
-        ]
-        ignore = [
-            "DETRAN",
-            "G",
-            "overno",
-            "de M",
-            "ato Grosso",
-            "overno d",
-            "e Mato Grosso",
-        ]
-        tmp = []
-        for x in texto_completo.strip().split("\n"):
+        try:
+            result = parser.parse(
+                pdfBytes,
+                ocr_enabled=True,
+                ocr_language='pt',
+            )
+        except Exception as e:
+            print(f"ERROR: LiteParser: {e}")
+            return None, ""
+
+        for x in result.text.split("\n"):   
             x = x.strip()
             if len(x) < 2:
                 continue
-            if x in ignore:
+            if x in ignore_lp:
                 continue
 
             skip = False
-            for p in prefixes:
+            for p in prefixes_lp:
                 if x.startswith(p):
                     skip = True
             if skip:
                 continue
 
-            for s in suffixes:
+            for s in suffixes_lp:
                 if x.endswith(s):
                     skip = True
             if skip:
                 continue
 
-            t = x.split(" ")
-            if (len(t) == 4) and (t[0] == "Página") and (t[2] == "de" or t[2] == "/"):
+            for c in contains_lp:
+                if x.find(c) != -1:
+                    skip = True
+
+            if skip:
                 continue
 
-            tmp.append(x)
+            t = x.split()
+            if (len(t) == 4 or len(t) == 5) and (t[0] == "Página") and (t[2] == "de" or t[2] == "/") and (t[4] == "===" if len(t) == 5 else True):
+                continue
 
-        texto_completo = "\n".join(tmp).strip()
+            texto_completo += x + "\n"
 
         # 1. Processo SIGADOC (ex: DETRAN-PRO-2025/30490)
         proc = re.search(r"(DETRAN-PRO-\d{4}/\d+)", texto_completo)
@@ -209,26 +233,32 @@ def extrair_dados_detran_pdf(caminho_pdf):
 
         # 4. RECORRENTE - Busca em múltiplos padrões
         # Padrão 1: Interessado:
-        rec_match = re.search(r"Interessado:\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
+        rec_match = re.search(
+            r"Interessado:\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
         if rec_match:
             nome_bruto = rec_match.group(1).strip()
-            nome_limpo = re.split(r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
+            nome_limpo = re.split(
+                r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
             dados["recorrente"] = _limpar_nome(nome_limpo)
 
         # Padrão 2: Nome do Interessado:
         if not dados["recorrente"]:
-            rec_match = re.search(r"(?:Nome\s*(?:do\s*)?Interessado|Interessado\s*a\s*(?:presente\s*)?(?:Recurso\s*)?)\s*[:\-]?\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
+            rec_match = re.search(
+                r"(?:Nome\s*(?:do\s*)?Interessado|Interessado\s*a\s*(?:presente\s*)?(?:Recurso\s*)?)\s*[:\-]?\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
             if rec_match:
                 nome_bruto = rec_match.group(1).strip()
-                nome_limpo = re.split(r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
+                nome_limpo = re.split(
+                    r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
                 dados["recorrente"] = _limpar_nome(nome_limpo)
 
         # Padrão 3: Proprietário:
         if not dados["recorrente"]:
-            rec_match = re.search(r"Proprietário:\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
+            rec_match = re.search(
+                r"Proprietário:\s*([A-ZÀ-Ü\s\.]+)", texto_completo, re.IGNORECASE)
             if rec_match:
                 nome_bruto = rec_match.group(1).strip()
-                nome_limpo = re.split(r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
+                nome_limpo = re.split(
+                    r"CPF|CNPJ|Resumo|Assunto|\n", nome_bruto, flags=re.IGNORECASE)[0].strip()
                 dados["recorrente"] = _limpar_nome(nome_limpo)
 
         # 5. CPF
